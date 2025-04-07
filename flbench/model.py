@@ -21,7 +21,7 @@ from flbench.nbody import lpt, nbody_bf, nbody_bf_scan
 from flbench.metrics import spectrum, powtranscoh, deconv_paint
 from flbench.utils import pdump, pload
 
-from flbench.utils import cgh2rg, rg2cgh, r2chshape, nvmap, safe_div, DetruncTruncNorm, DetruncUnif
+from flbench.utils import cgh2rg, rg2cgh, ch2rshape, nvmap, safe_div, DetruncTruncNorm, DetruncUnif
 from flbench.mcbench import Chains
 
 
@@ -29,7 +29,7 @@ from flbench.mcbench import Chains
 default_config={
             # Mesh and box parameters
             'mesh_shape':3 * (64,), # int
-            'box_shape':3 * (320.,), # in Mpc/h (aim for cell lengths between 1 and 10 Mpc/h)
+            'box_shape':3 * (320.,), # in Mpc/h
             # Evolution
             'a_obs':0.5,
             'evolution':'lpt', # kaiser, lpt, nbody
@@ -42,7 +42,7 @@ default_config={
             'los':(0.,0.,1.),
             'poles':(0,2,4),
             # Latents
-            'precond':'kaiser', # direct, fourier, kaiser
+            'precond':'kaiser_dyn', # direct, fourier, kaiser, kaiser_dyn
             'latents': {'Omega_m': {'group':'cosmo', 
                                     'label':'{\\Omega}_m', 
                                     'loc':0.3111, 
@@ -215,13 +215,13 @@ class Model():
     # Save and load #
     #################
     def save(self, path): # with pickle because not array-like
-        # pdump(asdict(self), path)
-        pdump(self, path)
+        pdump(asdict(self), path)
+        # pdump(self, path)
 
     @classmethod
     def load(cls, path):
-        # return cls(**pload(path))
-        return pload(path)
+        return cls(**pload(path))
+        # return pload(path)
 
 
 
@@ -522,14 +522,14 @@ class FieldLevelModel(Model):
 
             scale = (1 + self.gxy_count * boost_fid**2 * pmeshk_fid)**.5
             transfer = pmeshk**.5 / scale
-            scale = cgh2rg(scale, amp=True)
+            scale = cgh2rg(scale, norm="amp")
         
         elif self.precond=='kaiser_dyn':
             boost = kaiser_boost(cosmo, self.a_obs, bE, self.mesh_shape, self.los)
 
             scale = (1 + self.gxy_count * boost**2 * pmeshk)**.5
             transfer = pmeshk**.5 / scale
-            scale = cgh2rg(scale, amp=True)
+            scale = cgh2rg(scale, norm="amp")
         
         return scale, transfer
     
@@ -604,8 +604,8 @@ class FieldLevelModel(Model):
         cosmo_fid, bE_fid = get_cosmology(**self.loc_fid), 1 + self.loc_fid['b1']
         means, stds = kaiser_posterior(delta_obs, cosmo_fid, bE_fid, self.a_obs, 
                                        self.box_shape, self.gxy_count, self.los)
-        means, stds = cgh2rg(means), cgh2rg(temp**.5 * stds, amp=True)
-        post_mesh = rg2cgh(stds * jr.normal(rng, means.shape) + means)
+        post_mesh = rg2cgh(jr.normal(rng, ch2rshape(means.shape)))
+        post_mesh = temp**.5 * stds * post_mesh + means 
 
         init_params = self.loc_fid | {'init_mesh': post_mesh}
         if base:

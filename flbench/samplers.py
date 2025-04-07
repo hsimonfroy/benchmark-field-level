@@ -291,6 +291,21 @@ def mclmc_warmup(rng, init_pos, logdf, n_steps=0, config=None,
         position=init_pos, logdensity_fn=logdf, rng_key=init_key
     )
 
+    if config is None:
+        n_dim = len(ravel_pytree(state.position)[0])
+        config = MCLMCAdaptationState(
+            n_dim**.5, n_dim**.5 / 4, inverse_mass_matrix=jnp.ones(n_dim))
+        
+    elif isinstance(config, dict):
+        L = config['L']
+        step_size = config['step_size']
+        inverse_mass_matrix = config.get('inverse_mass_matrix', 1.0)
+        config = MCLMCAdaptationState(L=L, step_size=step_size, inverse_mass_matrix=inverse_mass_matrix)
+
+    else:
+        assert isinstance(config, MCLMCAdaptationState), \
+        "config must be either None, a dict, or a MCLMCAdaptationState"
+
     if n_steps > 0:
         # Build the kernel
         kernel = lambda inverse_mass_matrix : blackjax.mcmc.mclmc.build_kernel(
@@ -319,23 +334,9 @@ def mclmc_warmup(rng, init_pos, logdf, n_steps=0, config=None,
             frac_tune2=frac_tune2,
             frac_tune3=frac_tune3,
             num_effective_samples=256, # NOTE: higher value implies slower averaging rate
+            # TODO: add config as first guess (next blackjax update)
             )
-        debug.print("Performed {n_steps_tot} adaptation steps", n_steps_tot=n_steps_tot)
-    else:
-        if config is None:
-            n_dim = len(ravel_pytree(state.position)[0])
-            config = MCLMCAdaptationState(
-                n_dim**.5, n_dim**.5 / 4, inverse_mass_matrix=jnp.ones(n_dim))
-            
-        elif isinstance(config, dict):
-            L = config['L']
-            step_size = config['step_size']
-            inverse_mass_matrix = config.get('inverse_mass_matrix', 1.0)
-            config = MCLMCAdaptationState(L=L, step_size=step_size, inverse_mass_matrix=inverse_mass_matrix)
-
-        else:
-            assert isinstance(config, MCLMCAdaptationState), \
-            "config must be either None, a dict, or a MCLMCAdaptationState"
+        debug.print("Performed {n_steps_tot} adaptation steps", n_steps_tot=n_steps_tot)  
 
     return state, config
 
@@ -356,8 +357,10 @@ def mclmc_run(rng, state, config:dict|MCLMCAdaptationState, logdf, n_samples,
     
     if transform is None:
         n_dim = len(ravel_pytree(state.position)[0])
-        transform = lambda state, info: (state.position, 
-                                    {'mse_per_dim': jnp.mean(info.energy_change**2) / n_dim})
+        transform = lambda state, info: (state.position,
+                                    {'logdensity': state.logdensity, 
+                                     'mse_per_dim': jnp.mean(info.energy_change**2) / n_dim})
+
 
     if isinstance(config, dict):
         L = config['L']
@@ -423,13 +426,13 @@ def get_mclmc_run(logdf, n_samples, transform=None, thinning=1, progress_bar=Tru
 
 
 
-##################
-# Adjusted MCLMC #
-##################
+########
+# MAMS #
+########
 from blackjax.mcmc.adjusted_mclmc_dynamic import rescale
 from blackjax.util import run_inference_algorithm
 
-def adj_mclmc_warmup(rng, init_pos, logdf, n_steps=0, config=None, 
+def mams_warmup(rng, init_pos, logdf, n_steps=0, config=None, 
               diagonal_preconditioning=False, 
               random_trajectory_length=True,
                 L_proposal_factor=jnp.inf):
@@ -439,6 +442,22 @@ def adj_mclmc_warmup(rng, init_pos, logdf, n_steps=0, config=None,
     state = blackjax.mcmc.adjusted_mclmc_dynamic.init(
         position=init_pos, logdensity_fn=logdf, random_generator_arg=init_key
     )
+
+    if config is None:
+        n_dim = len(ravel_pytree(state.position)[0])
+        config = MCLMCAdaptationState(
+            # n_dim**.5, n_dim**.5 / 5, inverse_mass_matrix=jnp.ones(n_dim))
+            n_dim**.5, n_dim**.5 / 64, inverse_mass_matrix=jnp.ones(n_dim))
+        
+    elif isinstance(config, dict):
+        L = config['L']
+        step_size = config['step_size']
+        inverse_mass_matrix = config.get('inverse_mass_matrix', 1.0)
+        config = MCLMCAdaptationState(L=L, step_size=step_size, inverse_mass_matrix=inverse_mass_matrix)
+
+    else:
+        assert isinstance(config, MCLMCAdaptationState), \
+        "config must be either None, a dict, or a MCLMCAdaptationState"
 
     if n_steps > 0:
         # Build the kernel
@@ -451,6 +470,8 @@ def adj_mclmc_warmup(rng, init_pos, logdf, n_steps=0, config=None,
         kernel = lambda rng_key, state, avg_num_integration_steps, step_size, inverse_mass_matrix: blackjax.mcmc.adjusted_mclmc_dynamic.build_kernel(
             integration_steps_fn=integration_steps_fn(avg_num_integration_steps),
             inverse_mass_matrix=inverse_mass_matrix,
+            integrator=isokinetic_mclachlan,
+            # integrator=isokinetic_omelyan,
         )(
             rng_key=rng_key,
             state=state,
@@ -459,7 +480,8 @@ def adj_mclmc_warmup(rng, init_pos, logdf, n_steps=0, config=None,
             L_proposal_factor=L_proposal_factor,
         )
 
-        target_acc_rate = 0.9 # our recommendation
+        # target_acc_rate = 0.9 # our recommendation
+        target_acc_rate = 0.65
 
         state, config, n_steps_tot = blackjax.adjusted_mclmc_find_L_and_step_size(
             mclmc_kernel=kernel,
@@ -474,31 +496,28 @@ def adj_mclmc_warmup(rng, init_pos, logdf, n_steps=0, config=None,
             params=config,
             )
         debug.print("Performed {n_steps_tot} adaptation steps", n_steps_tot=n_steps_tot)
-    else:
-        if config is None:
-            n_dim = len(ravel_pytree(state.position)[0])
-            config = MCLMCAdaptationState(
-                n_dim**.5, n_dim**.5 / 5, inverse_mass_matrix=jnp.ones(n_dim))
-            
-        elif isinstance(config, dict):
-            L = config['L']
-            step_size = config['step_size']
-            inverse_mass_matrix = config.get('inverse_mass_matrix', 1.0)
-            config = MCLMCAdaptationState(L=L, step_size=step_size, inverse_mass_matrix=inverse_mass_matrix)
-
-        else:
-            assert isinstance(config, MCLMCAdaptationState), \
-            "config must be either None, a dict, or a MCLMCAdaptationState"
 
     return state, config
 
 
-def adj_mclmc_run(rng, state, config:dict|MCLMCAdaptationState, logdf, n_samples,  
+def mams_run(rng, state, config:dict|MCLMCAdaptationState, logdf, n_samples,  
               transform=None, thinning=1, progress_bar=True, L_proposal_factor=jnp.inf):
+    integrator = isokinetic_mclachlan
+
+    if integrator == isokinetic_velocity_verlet:
+        n_eval_per_steps = 1
+    elif integrator == isokinetic_mclachlan:
+        n_eval_per_steps = 2 
+    elif integrator == isokinetic_yoshida:
+        n_eval_per_steps = 3
+    elif integrator == isokinetic_omelyan:
+        n_eval_per_steps = 5
 
     if transform is None:
         transform = lambda state, info: (state.position, 
-                                    {'n_evals': jnp.sum(info.num_integration_steps)})
+                                    {'logdensity': state.logdensity,
+                                     'acceptance_rate': jnp.mean(info.acceptance_rate), 
+                                     'n_evals': jnp.sum(info.num_integration_steps) * n_eval_per_steps})
 
     if isinstance(config, dict):
         L = config['L']
@@ -518,6 +537,7 @@ def adj_mclmc_run(rng, state, config:dict|MCLMCAdaptationState, logdf, n_samples
         ),
         inverse_mass_matrix=inverse_mass_matrix,
         L_proposal_factor=L_proposal_factor,
+        integrator=integrator,
     )
 
      # Run the sampler
@@ -546,17 +566,17 @@ def adj_mclmc_run(rng, state, config:dict|MCLMCAdaptationState, logdf, n_samples
 
 
 
-def get_adj_mclmc_warmup(logdf, n_steps=None, config=None,
+def get_mams_warmup(logdf, n_steps=None, config=None,
               diagonal_preconditioning=False):
-    return partial(adj_mclmc_warmup,
+    return partial(mams_warmup,
                    logdf=logdf,
                    n_steps=n_steps,
                    config=config,
                    diagonal_preconditioning=diagonal_preconditioning)
 
 
-def get_adj_mclmc_run(logdf, n_samples, transform=None, thinning=1, progress_bar=True):
-    return partial(adj_mclmc_run, 
+def get_mams_run(logdf, n_samples, transform=None, thinning=1, progress_bar=True):
+    return partial(mams_run, 
                    logdf=logdf,
                    n_samples=n_samples,
                    transform=transform,
@@ -565,83 +585,7 @@ def get_adj_mclmc_run(logdf, n_samples, transform=None, thinning=1, progress_bar
 
 
 
-def run_adjusted_mclmc_dynamic(
-    logdensity_fn,
-    num_steps,
-    initial_position,
-    key,
-    transform=lambda state, _ : state.position,
-    diagonal_preconditioning=True,
-    random_trajectory_length=True,
-    L_proposal_factor=jnp.inf
-    ):
 
-    init_key, tune_key, run_key = jr.split(key, 3)
-
-    initial_state = blackjax.mcmc.adjusted_mclmc_dynamic.init(
-        position=initial_position,
-        logdensity_fn=logdensity_fn,
-        random_generator_arg=init_key,
-    )
-
-    if random_trajectory_length:
-        integration_steps_fn = lambda avg_num_integration_steps: lambda k: jnp.ceil(
-            jr.uniform(k) * rescale(avg_num_integration_steps))
-    else:
-        integration_steps_fn = lambda avg_num_integration_steps: lambda _: jnp.ceil(avg_num_integration_steps)
-
-    kernel = lambda rng_key, state, avg_num_integration_steps, step_size, inverse_mass_matrix: blackjax.mcmc.adjusted_mclmc_dynamic.build_kernel(
-        integration_steps_fn=integration_steps_fn(avg_num_integration_steps),
-        inverse_mass_matrix=inverse_mass_matrix,
-    )(
-        rng_key=rng_key,
-        state=state,
-        step_size=step_size,
-        logdensity_fn=logdensity_fn,
-        L_proposal_factor=L_proposal_factor,
-    )
-
-    target_acc_rate = 0.9 # our recommendation
-
-    (
-        blackjax_state_after_tuning,
-        blackjax_mclmc_sampler_params,
-        _
-    ) = blackjax.adjusted_mclmc_find_L_and_step_size(
-        mclmc_kernel=kernel,
-        num_steps=num_steps,
-        state=initial_state,
-        rng_key=tune_key,
-        target=target_acc_rate,
-        frac_tune1=0.1,
-        frac_tune2=0.1,
-        frac_tune3=0.1, # our recommendation
-        diagonal_preconditioning=diagonal_preconditioning,
-    )
-
-    step_size = blackjax_mclmc_sampler_params.step_size
-    L = blackjax_mclmc_sampler_params.L
-
-    alg = blackjax.adjusted_mclmc_dynamic(
-        logdensity_fn=logdensity_fn,
-        step_size=step_size,
-        integration_steps_fn=lambda key: jnp.ceil(
-            jr.uniform(key) * rescale(L / step_size)
-        ),
-        inverse_mass_matrix=blackjax_mclmc_sampler_params.inverse_mass_matrix,
-        L_proposal_factor=L_proposal_factor,
-    )
-
-    _, out = run_inference_algorithm(
-        rng_key=run_key,
-        initial_state=blackjax_state_after_tuning,
-        inference_algorithm=alg,
-        num_steps=num_steps,
-        transform=transform,
-        progress_bar=False,
-    )
-
-    return out
 
 
 

@@ -235,106 +235,143 @@ def analyt_log_abs_det_jac(x, loc, scale, low, high):
 #############################
 # Fourier reparametrization #
 #############################
-def id_cgh(shape, part="real", norm="backward"):
+def _rg2cgh(mesh, part="real", norm="backward"):
     """
-    Return indices and weights to permute a real Gaussian tensor of given shape (3D)
-    into a complex Gaussian Hermitian tensor. 
-    Handle the Hermitian symmetry, specificaly at border faces, edges, and vertices.
+    Return the real and imaginary parts of a complex Gaussian Hermitian tensor
+    obtained by permuting and reweighting a real Gaussian tensor (3D).
+    Handle the Hermitian symmetry, specifically at border faces, edges, and vertices.
     """
-    shape = np.asarray(shape)
-    sx, sy, sz = shape
-    assert sx%2 == sy%2 == sz%2 == 0, "dimensions lengths must be even."
+    shape = np.array(mesh.shape)
+    assert np.all(shape % 2 == 0), "dimension lengths must be even."
     
-    hx, hy, hz = shape//2
-    kshape = (sx, sy, hz+1)
-    
-    weights = np.ones(kshape) / 2**.5
-    if norm == "backward":
-        weights *= shape.prod()**.5 
-    elif norm == "forward":
-        weights /= shape.prod()**.5
-    else:
-        assert norm=="ortho", "norm must be either 'backward', 'forward', or 'ortho'."
-
-    id = np.zeros((3, *kshape), dtype=int)
-    xyz = np.indices(shape, dtype=int)
+    hx, hy, hz = shape // 2
+    meshk = jnp.zeros(r2chshape(shape))
 
     if part == "imag":
-        slix, sliy, sliz = slice(hx+1, None), slice(hy+1, None), slice(hz+1, None)
+        slix, sliy, sliz = slice(hx + 1, None), slice(hy + 1, None), slice(hz + 1, None)
     else:
         assert part == "real", "part must be either 'real' or 'imag'."
-        slix, sliy, sliz = slice(1,hx), slice(1,hy), slice(1,hz)
-    id[...,1:-1] = xyz[...,sliz]
+        slix, sliy, sliz = slice(1, hx), slice(1, hy), slice(1, hz)
+    meshk = meshk.at[:, :, 1:-1].set(mesh[:, :, sliz])
         
-    for k in [0,hz]: # two faces
-        id[...,1:hy,k] = xyz[...,sliy,k]
-        id[...,1:,hy+1:,k] = xyz[...,1:,sliy,k][...,::-1,::-1]
-        id[...,0,hy+1:,k] = xyz[...,0,sliy,k][...,::-1] # handle the border
-        if part == "imag":
-            weights[:,hy+1:,k] *= -1
+    for k in [0, hz]:  # two faces
+        meshk = meshk.at[:, 1:hy, k].set(mesh[:, sliy, k])
+        meshk = meshk.at[1:, hy + 1:, k].set(mesh[1:, sliy, k][::-1, ::-1])
+        meshk = meshk.at[0, hy + 1:, k].set(mesh[0, sliy, k][::-1])  # handle the border
+        if part == "imag" and norm != "amp":
+            meshk = meshk.at[:, hy + 1:, k].multiply(-1.)
 
-        for j in [0,hy]: # two edges per faces
-            id[...,1:hx,j,k] = xyz[...,slix,j,k]
-            id[...,hx+1:,j,k] = xyz[...,slix,j,k][...,::-1]
-            if part == "imag":
-                weights[hx+1:,j,k] *= -1
+        for j in [0, hy]:  # two edges per face
+            meshk = meshk.at[1:hx, j, k].set(mesh[slix, j, k])
+            meshk = meshk.at[hx + 1:, j, k].set(mesh[slix, j, k][::-1])
+            if part == "imag" and norm != "amp":
+                meshk = meshk.at[hx + 1:, j, k].multiply(-1.)
 
-            for i in [0,hx]: # two points per edges
-                id[...,i,j,k] = xyz[...,i,j,k]
-                if part == "imag":
-                    weights[i,j,k] *= 0.
-                else:
-                    weights[i,j,k] *= 2**.5
-    
-    return tuple(id), weights
+            for i in [0, hx]:  # two points per edge
+                if part == "real":
+                    meshk = meshk.at[i, j, k].set(mesh[i, j, k])
+                    if norm != "amp":
+                        meshk = meshk.at[i, j, k].multiply(2**.5)
+
+    shape = shape.astype(float)
+    if norm == "backward":
+        meshk /= (2 / shape.prod())**.5
+    elif norm == "forward":
+        meshk /= (2 * shape.prod())**.5
+    elif norm == "ortho":
+        meshk /= 2**.5
+    else:
+        assert norm == "amp", "norm must be either 'backward', 'forward', 'ortho', or 'amp'."
+
+    return meshk
 
 
-
-def rg2cgh(mesh, amp:bool=False, norm="backward"):
+def _cgh2rg(meshk, part="real", norm="backward"):
     """
-    Permute a real Gaussian tensor (3D) into a complex Gaussian Hermitian tensor.
+    Return the "real" and "imaginary" partitions of a real Gaussian tensor (3D)
+    obtained by permuting and reweighting the real or imaginary parts of a 
+    complex Gaussian Hermitian tensor.
+    Handle the Hermitian symmetry, specifically at border faces, edges, and vertices.
+    """
+    shape = np.array(ch2rshape(meshk.shape))
+    assert np.all(shape % 2 == 0), "dimension lengths must be even."
+
+    hx, hy, hz = shape // 2
+    mesh = jnp.zeros(shape)
+
+    if part == "imag":
+        slix, sliy, sliz = slice(hx + 1, None), slice(hy + 1, None), slice(hz + 1, None)
+    else:
+        assert part == "real", "part must be either 'real' or 'imag'."
+        slix, sliy, sliz = slice(1, hx), slice(1, hy), slice(1, hz)
+    mesh = mesh.at[:, :, sliz].set(meshk[:, :, 1:-1])
+        
+    for k in [0, hz]:  # two faces
+        mesh = mesh.at[:, sliy, k].set(meshk[:, 1:hy, k])
+        mesh = mesh.at[1:, sliy, k].set(meshk[1:, hy + 1:, k][::-1, ::-1])
+        mesh = mesh.at[0, sliy, k].set(meshk[0, hy + 1:, k][::-1])  # handle the border
+        if part == "imag" and norm != "amp":
+            mesh = mesh.at[:, sliy, k].multiply(-1.)
+
+        for j in [0, hy]:  # two edges per face
+            mesh = mesh.at[slix, j, k].set(meshk[1:hx, j, k])
+            mesh = mesh.at[slix, j, k].set(meshk[hx + 1:, j, k][::-1])
+            if part == "imag" and norm != "amp":
+                mesh = mesh.at[slix, j, k].multiply(-1.)
+
+            for i in [0, hx]:  # two points per edge
+                if part == "real":
+                    mesh = mesh.at[i, j, k].set(meshk[i, j, k])
+                    if norm != "amp":
+                        mesh = mesh.at[i, j, k].divide(2**.5)
+
+    shape = shape.astype(float)
+    if norm == "backward":
+        mesh *= (2 / shape.prod())**.5
+    elif norm == "forward":
+        mesh *= (2 * shape.prod())**.5
+    elif norm == "ortho":
+        mesh *= 2**.5
+    else:
+        assert norm == "amp", "norm must be either 'backward', 'forward', 'ortho', or 'amp'."
+
+    return mesh
+
+
+def rg2cgh(mesh, norm="backward"):
+    """
+    Permute and reweight a real Gaussian tensor (3D) into a complex Gaussian Hermitian tensor.
     The output would therefore be distributed as the real Fourier transform of a Gaussian tensor.
 
-    This means that by setting `mean, amp = cgh2rg(meank, norm), cgh2rg(ampk, True, norm)`\\
+    This means that by setting `mean, amp = cgh2rg(meank, norm), cgh2rg(ampk, "amp")`\\
     then `rg2cgh(mean + amp * N(0,I), norm)` is distributed as `meank + ampk * rfftn(N(0,I), norm)`
 
     In particular `rg2cgh(N(0,I), norm)` is distributed as `rfftn(N(0,I), norm)`
     """
-    shape = mesh.shape
-    id_real, w_real = id_cgh(shape, part="real", norm=norm)
-    id_imag, w_imag = id_cgh(shape, part="imag", norm=norm)
-    if not amp:
-        return mesh[id_real] * w_real + 1j * mesh[id_imag] * w_imag
+    real = _rg2cgh(mesh, part="real", norm=norm)
+    if norm == "amp":
+        return real
     else:
-        # Average wavevector real and imaginary power and return amplitude
-        return ((mesh[id_real]**2 + mesh[id_imag]**2) / 2)**.5
+        imag = _rg2cgh(mesh, part="imag", norm=norm)
+        return real + 1j * imag
 
 
-
-def cgh2rg(meshk, amp:bool=False, norm="backward"):
+def cgh2rg(meshk, norm="backward"):
     """
-    Permute a complex Gaussian Hermitian tensor into a real Gaussian tensor (3D).
+    Permute and reweight a complex Gaussian Hermitian tensor into a real Gaussian tensor (3D).
 
-    This means that by setting `mean, amp = cgh2rg(meank, norm), cgh2rg(ampk, True, norm)`\\
+    This means that by setting `mean, amp = cgh2rg(meank, norm), cgh2rg(ampk, "amp")`\\
     then `rg2cgh(mean + amp * N(0,I), norm)` is distributed as `meank + ampk * rfftn(N(0,I), norm)`
 
     In particular `rg2cgh(N(0,I), norm)` is distributed as `rfftn(N(0,I), norm)`
     """
-    shape = ch2rshape(meshk.shape)
-    id_real, w_real = id_cgh(shape, part="real", norm=norm)
-    id_imag, w_imag = id_cgh(shape, part="imag", norm=norm)
-    
-    mesh = jnp.zeros(shape)
-    if not amp:
-        # NOTE: w_imag can be zero, which is not safe for gradients
-        mesh = mesh.at[id_imag].set(safe_div(meshk.imag, w_imag)) 
-        mesh = mesh.at[id_real].set(meshk.real / w_real)
-        # NOTE: real after imag to overwrite the 2^3=8 points
-    else:
+    real = _cgh2rg(meshk.real, part="real", norm=norm)
+    if norm == "amp":
         # Give same amplitude to wavevector real and imaginary part
-        mesh = mesh.at[id_imag].set(meshk.real)
-        mesh = mesh.at[id_real].set(meshk.real)
-    return mesh
+        imag = _cgh2rg(meshk.real, part="imag", norm=norm)
+    else:
+        imag = _cgh2rg(meshk.imag, part="imag", norm=norm)
+    return real + imag
 
 
 def ch2rshape(kshape):
@@ -350,6 +387,8 @@ def r2chshape(shape):
     Real shape to complex Hermitian shape.
     """
     return (*shape[:2], shape[2]//2+1)
+
+
 
 
 
