@@ -1,5 +1,8 @@
 # Field-Level Cosmological Inference Benchmark
 
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![arXiv](https://img.shields.io/badge/arXiv-2504.XXXX-b31b1b.svg)](https://arxiv.org/abs/2504.XXXX)
+
 This repository contains tools and notebooks for benchmarking field-level cosmological inference from galaxy surveys. The project aims to provide a standardized framework for evaluating and comparing different inference methods in cosmological field-level analysis.
 
 ## Overview
