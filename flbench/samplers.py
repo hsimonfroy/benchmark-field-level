@@ -315,7 +315,6 @@ def mclmc_warmup(rng, init_pos, logdf, n_steps=0, config=None,
         )
 
         # Find values for L and step_size
-        print(f"Perform {n_steps} adaptation steps")
         frac_tune1 = 0.5
         frac_tune2 = 0.5
         frac_tune3 = 0. 

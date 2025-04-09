@@ -1,39 +1,56 @@
-# Field-Level Cosmological Inference Benchmark
+# Benchmark Field-Level Inference
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![arXiv](https://img.shields.io/badge/arXiv-2504.XXXX-b31b1b.svg)](https://arxiv.org/abs/2504.XXXX)
+[![arXiv](https://img.shields.io/badge/astro--ph.CO-arXiv:2504.XXXX-b31b1b.svg)](https://arxiv.org/abs/2504.XXXX)
 
-This repository contains tools and notebooks for benchmarking field-level cosmological inference from galaxy surveys. The project aims to provide a standardized framework for evaluating and comparing different inference methods in cosmological field-level analysis.
 
 ## Overview
+This repository accompanies the JCAP-submitted paper [**Benchmarking field-level cosmological inference from galaxy surveys**]().
 
-Field-level cosmological inference is a powerful approach that allows us to extract maximum information from galaxy survey data by modeling the entire observed field rather than just summary statistics. This project provides a benchmark suite to evaluate different inference methods and compare their performance on an idealized but standardized galaxy clustering analysis.
+Field-level inference is a powerful approach that allows us to extract maximum information from cosmological surveys (e.g. galaxy surveys) by modeling the entire observed field rather than just its summary statistics. This project provides a benchmark suite to evaluate different inference methods and compare their performance on an idealized but standardized galaxy clustering model.
+
 
 ## Installation
 
-1. Clone the repository:
+To install the package, use the following command:
+
 ```bash
-git clone https://github.com/hsimonfroy/benchmark-field-level.git
-cd benchmark-field-level
+pip install -e git+https://github.com/hsimonfroy/benchmark-field-level.git#egg=flbench
 ```
 
-2. Install the package:
-```bash
-pip install -e .
-```
+## Model
 
-## Tutorial Notebooks
+The benchmarked galaxy clustering model includes:
+ * Linear matter field generation
+ * Structure formation, selected among
+    * Linear growth
+    * Lagrangian Perturbation Theory (1LPT or 2LPT) displacement
+    * Particle Mesh (PM) N-body displacement
+ * Redshift-Space Distortions (RSD)
+ * Second order Lagrangian galaxy bias
+ * Observational Noise
 
-The `intro/` directory contains Jupyter notebooks that demonstrate how to use the benchmark tools:
+https://github.com/hsimonfroy/montecosmo/assets/85559558/b64ff962-00fd-4b5f-8ea2-4f476c325cd0
 
-1. `sample_analysis.ipynb`: This notebook provides a comprehensive introduction to sample analysis in field-level cosmological inference. It covers:
-   - Loading and preprocessing galaxy survey data
-   - Basic statistical analysis
-   - Visualization techniques
-   - Common pitfalls and best practices
+## Inference
 
-2. `infer_model.ipynb`: This notebook focuses on model inference techniques, including:
-   - Setting up inference models
-   - Parameter estimation
-   - Model comparison
-   - Performance evaluation
+
+## Tutorial
+
+The `tuto/` directory contains Jupyter notebooks that demonstrate how to use the benchmark tools:
+
+
+1. [`infer_model.ipynb`](https://github.com/hsimonfroy/benchmark-field-level/blob/main/tuto/infer_model.ipynb):
+    * Experimental setup
+        * Instantiate a cosmological model
+        * Generate observation and condition the model on it
+    * Perform the inference
+        * Warmup phase only inferring the field with MCLMC sampler
+        * Warmup phase inferring all parameters jointly with any implemented sampler 
+
+2. [`sample_analysis.ipynb`](https://github.com/hsimonfroy/benchmark-field-level/blob/main/tuto/sample_analysis.ipynb):
+    * Assess convergence
+        * Chain diagnostics
+        * Inspection at the field-level
+    * Quantify performance
+

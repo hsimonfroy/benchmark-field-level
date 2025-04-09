@@ -194,6 +194,8 @@ class Model():
 
     def block(self, hide_fn=None, hide=None, expose_types=None, expose=None, hide_base=True, hide_det=True):
         """
+        Selectively hides parameters in the model.
+        
         Precedence is given according to the order: hide_fn, hide, expose_types, expose, (hide_base, hide_det).
         Only the set of parameters with the precedence is considered.
         The default call thus hides base and other deterministic sites, for sampling purposes.
@@ -298,7 +300,7 @@ class FieldLevelModel(Model):
 
         self.mesh_shape = np.asarray(self.mesh_shape)
         # NOTE: if x32, cast mesh_shape into float32 to avoid int32 overflow when computing products
-        self.box_shape = np.asarray(self.box_shape).astype(float)
+        self.box_shape = np.asarray(self.box_shape, dtype=float)
         self.cell_shape = self.box_shape / self.mesh_shape
         if self.los is not None:
             self.los = np.asarray(self.los)
@@ -379,7 +381,7 @@ class FieldLevelModel(Model):
             cosmology._workspace = {}  # HACK: temporary fix
             dpos, vel = lpt(cosmology, **init, pos=pos, a=self.a_obs, order=self.lpt_order, grad_fd=False, lap_fd=False)
             pos += dpos
-            pos, vel = deterministic('lpt_part', (pos, vel))
+            pos, vel = deterministic('lpt_pos', pos), vel
 
         elif self.evolution=='nbody':
             cosmology._workspace = {}  # HACK: temporary fix
@@ -390,7 +392,7 @@ class FieldLevelModel(Model):
 
         # RSD displacement at a_obs
         pos += rsd(cosmology, self.a_obs, vel, self.los)
-        pos, vel = deterministic('rsd_part', (pos, vel))
+        pos, vel = deterministic('rsd_pos', pos), vel
 
         # CIC paint weighted by Lagrangian bias expansion weights
         gxy_mesh = cic_paint(jnp.zeros(self.mesh_shape), pos, lbe_weights)
