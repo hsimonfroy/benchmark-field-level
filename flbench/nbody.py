@@ -8,9 +8,7 @@ from flbench.utils import ch2rshape, safe_div
 
 # from jaxpm.pm import pm_forces
 import jax_cosmo as jc
-from jaxpm.growth import (growth_factor, growth_rate, 
-                          growth_factor_second, growth_rate_second,
-                          _growth_factor_ODE)
+from jaxpm.growth import _growth_factor_ODE
 from jaxpm.kernels import longrange_kernel
 from jaxpm.painting import cic_paint, cic_read
 
@@ -394,8 +392,8 @@ def lpt_fpm(cosmo:Cosmology, init_mesh, pos, a, order=1, grad_fd=True, lap_fd=Fa
         mesh_shape = ch2rshape(init_mesh.shape)
 
     init_force = pm_forces(pos, mesh_shape, mesh=delta_k, grad_fd=grad_fd, lap_fd=lap_fd)
-    dq = growth_factor(cosmo, a) * init_force
-    p = a**2 * growth_rate(cosmo, a) * E * dq
+    dq = a2g(cosmo, a) * init_force
+    p = a**2 * a2f(cosmo, a) * E * dq
 
     if order == 2:
         kvec = rfftk(mesh_shape)
@@ -416,11 +414,11 @@ def lpt_fpm(cosmo:Cosmology, init_mesh, pos, a, order=1, grad_fd=True, lap_fd=Fa
                 delta2 -= jnp.fft.irfftn(hess_ij * pot_k)**2
 
         init_force2 = pm_forces(pos, mesh_shape, mesh=jnp.fft.rfftn(delta2), grad_fd=grad_fd, lap_fd=lap_fd)
-        dq2 = (3/7 * growth_factor_second(cosmo, a)) * init_force2 # D2 is renormalized: - D2 = 3/7 * growth_factor_second
-        p2 = (a**2 * growth_rate_second(cosmo, a) * E) * dq2
+        dq2 = a2gg(cosmo, a) * init_force2 # D2 is renormalized: - D2 = 3/7 * growth_factor_second
+        p2 = (a**2 * a2ff(cosmo, a) * E) * dq2
 
-        dq += dq2
-        p  += p2
+        dq -= dq2
+        p  -= p2
 
     return dq, p
 

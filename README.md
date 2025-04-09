@@ -20,12 +20,12 @@ pip install -e git+https://github.com/hsimonfroy/benchmark-field-level.git#egg=f
 
 ## Model
 
-The benchmarked galaxy clustering model includes:
+The benchmarked galaxy clustering model is **fast** (jit-compiled and GPU accelerated) and **differentiable**. It includes:
  * Linear matter field generation
  * Structure formation, selected among
     * Linear growth
     * Lagrangian Perturbation Theory (1LPT or 2LPT) displacement
-    * Particle Mesh (PM) N-body displacement
+    * Particle Mesh (PM) N-body displacement, with BullFrog or FastPM solvers
  * Redshift-Space Distortions (RSD)
  * Second order Lagrangian galaxy bias
  * Observational Noise

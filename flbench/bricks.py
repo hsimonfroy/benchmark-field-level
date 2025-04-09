@@ -5,10 +5,9 @@ from jax import numpy as jnp, tree, debug
 import jax_cosmo as jc
 from jax_cosmo import Cosmology
 from jaxpm.painting import cic_read
-from jaxpm.growth import growth_factor, growth_rate
 
 from flbench.utils import std2trunc, trunc2std, rg2cgh, cgh2rg, ch2rshape, r2chshape, safe_div
-from flbench.nbody import rfftk, invlaplace_kernel
+from flbench.nbody import rfftk, invlaplace_kernel, a2g, a2f
 
 
 # [Planck2015 XIII](https://arxiv.org/abs/1502.01589) Table 4 final column (best fit)
@@ -159,7 +158,7 @@ def lagrangian_weights(cosmo:Cosmology, a, pos, box_shape,
         w = 1 + b_1 \\delta + b_2 \\left(\\delta^2 - \\braket{\\delta^2}\\right) + b_{s^2} \\left(s^2 - \\braket{s^2}\\right) + b_{\\nabla^2} \\nabla^2 \\delta
     """    
     # Get init_mesh at observation scale factor
-    init_mesh *= growth_factor(cosmo, a)
+    init_mesh *= a2g(cosmo, a)
     # if jnp.isrealobj(init_mesh):
     #     delta = init_mesh
     #     delta_k = jnp.fft.rfftn(delta)
@@ -226,7 +225,7 @@ def rsd(cosmo:Cosmology, a, vel, los:np.ndarray=None):
         los /= np.linalg.norm(los)
         # growth-time integrator velocity = dpos / dg = v / (H * g * f), so dpos_rsd := v / H = vel * g * f
         # If vel is in comoving Mpc/h/s, dpos_rsd is in Mpc/h
-        dpos = vel * growth_factor(cosmo, a) * growth_rate(cosmo, a)
+        dpos = vel * a2g(cosmo, a) * a2f(cosmo, a)
         # Project velocity on line-of-sight
         dpos = dpos * los
         return dpos
@@ -239,7 +238,7 @@ def kaiser_boost(cosmo:Cosmology, a, bE, mesh_shape, los:np.ndarray=None):
     No RSD if los is None.
     """
     if los is None:
-        return growth_factor(cosmo, a) * bE
+        return a2g(cosmo, a) * bE
     else:
         los = np.asarray(los)
         los /= np.linalg.norm(los)
@@ -248,7 +247,7 @@ def kaiser_boost(cosmo:Cosmology, a, bE, mesh_shape, los:np.ndarray=None):
         mumesh = sum(ki * losi for ki, losi in zip(kvec, los))
         mumesh = safe_div(mumesh, kmesh)
 
-        return growth_factor(cosmo, a) * (bE + growth_rate(cosmo, a) * mumesh**2)
+        return a2g(cosmo, a) * (bE + a2f(cosmo, a) * mumesh**2)
 
 
 def kaiser_model(cosmo:Cosmology, a, bE, init_mesh, los:np.ndarray=None):
