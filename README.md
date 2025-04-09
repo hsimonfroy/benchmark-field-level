@@ -1,7 +1,8 @@
 # Benchmark Field-Level Inference
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![arXiv](https://img.shields.io/badge/astro--ph.CO-arXiv:2504.XXXX-b31b1b.svg)](https://arxiv.org/abs/2504.XXXX)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/hsimonfroy/benchmark-field-level/blob/main/examples/infer_model.ipynb) 
 
 
 ## Overview
@@ -10,13 +11,20 @@ This repository accompanies the JCAP-submitted paper [**Benchmarking field-level
 Field-level inference is a powerful approach that allows us to extract maximum information from cosmological surveys (e.g. galaxy surveys) by modeling the entire observed field rather than just its summary statistics. This project provides a benchmark suite to evaluate different inference methods and compare their performance on an idealized but standardized galaxy clustering model.
 
 
-## Installation
+## Install
+For standard installation of the package and its dependencies, use:
 
-To install the package, use the following command:
+```bash
+pip install git+https://github.com/hsimonfroy/benchmark-field-level.git
+```
+
+For development purposes, install in editable mode:
 
 ```bash
 pip install -e git+https://github.com/hsimonfroy/benchmark-field-level.git#egg=flbench
 ```
+
+This package relies on [JAX](https://github.com/google/jax) for GPU-accelerated computations. Please note that its installation is left to the user. Follow the [official JAX installation guide](https://github.com/google/jax#installation) to set it up for your specific hardware.
 
 ## Model
 
@@ -41,9 +49,9 @@ The `examples/` directory contains Jupyter notebooks that demonstrate how to use
 1. [**`infer_model.ipynb`**](https://github.com/hsimonfroy/benchmark-field-level/blob/main/examples/infer_model.ipynb)  
     [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/hsimonfroy/benchmark-field-level/blob/main/examples/infer_model.ipynb)  
     * Experimental setup:
-      * Instantiate a cosmological model
+      * Instantiate a field-level cosmological model
       * Generate observation and condition the model on it
-    * Perform the inference:
+    * Perform field-level inference:
       * Warmup phase only inferring the field with MCLMC sampler
       * Warmup phase inferring all parameters jointly with any implemented sampler
 
