@@ -11,7 +11,7 @@ dependencies = ["numpyro",
                 "jax-cosmo",
                 "jaxpm @ git+https://github.com/DifferentiableUniverseInitiative/JaxPM.git@v0.0.2",
                 "diffrax",
-                "blackjax",
+                "blackjax>=1.2.5",
                 "getdist",
                 "graphviz",]
 readme = "README.md"

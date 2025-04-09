@@ -385,9 +385,9 @@ class FieldLevelModel(Model):
 
         elif self.evolution=='nbody':
             cosmology._workspace = {}  # HACK: temporary fix
-            part = nbody_bf(cosmology, **init, pos=pos, a=self.a_obs, n_steps=self.nbody_steps, 
+            pos, vel = nbody_bf(cosmology, **init, pos=pos, a=self.a_obs, n_steps=self.nbody_steps, 
                                  grad_fd=False, lap_fd=False, snapshots=self.nbody_snapshots)
-            part = deterministic('nbody_part', part)
+            part = deterministic('nbody_pos', pos), vel
             pos, vel = tree.map(lambda x: x[-1], part)
 
         # RSD displacement at a_obs

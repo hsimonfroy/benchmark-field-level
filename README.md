@@ -35,22 +35,21 @@ https://github.com/hsimonfroy/montecosmo/assets/85559558/b64ff962-00fd-4b5f-8ea2
 ## Inference
 
 
-## Tutorial
+## Examples
+The `examples/` directory contains Jupyter notebooks that demonstrate how to use the benchmark tools:
 
-The `tuto/` directory contains Jupyter notebooks that demonstrate how to use the benchmark tools:
+1. [**`infer_model.ipynb`**](https://github.com/hsimonfroy/benchmark-field-level/blob/main/examples/infer_model.ipynb)  
+    [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/hsimonfroy/benchmark-field-level/blob/main/examples/infer_model.ipynb)  
+    * Experimental setup:
+      * Instantiate a cosmological model
+      * Generate observation and condition the model on it
+    * Perform the inference:
+      * Warmup phase only inferring the field with MCLMC sampler
+      * Warmup phase inferring all parameters jointly with any implemented sampler
 
-
-1. [`infer_model.ipynb`](https://github.com/hsimonfroy/benchmark-field-level/blob/main/tuto/infer_model.ipynb):
-    * Experimental setup
-        * Instantiate a cosmological model
-        * Generate observation and condition the model on it
-    * Perform the inference
-        * Warmup phase only inferring the field with MCLMC sampler
-        * Warmup phase inferring all parameters jointly with any implemented sampler 
-
-2. [`sample_analysis.ipynb`](https://github.com/hsimonfroy/benchmark-field-level/blob/main/tuto/sample_analysis.ipynb):
-    * Assess convergence
-        * Chain diagnostics
-        * Inspection at the field-level
+2. [**`sample_analysis.ipynb`**](https://github.com/hsimonfroy/benchmark-field-level/blob/main/examples/sample_analysis.ipynb)  
+    [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/hsimonfroy/benchmark-field-level/blob/main/examples/sample_analysis.ipynb)  
+    * Assess convergence:
+      * Chain diagnostics
+      * Inspection at the field-level
     * Quantify performance
-
