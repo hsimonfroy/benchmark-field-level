@@ -7,7 +7,13 @@ name = "flbench"
 version = "0.0.1"
 authors = [{name="Hugo Simon-Onfroy"}] # email=""
 description = "Benchmarking field-level cosmological inference from galaxy surveys."
-dependencies = ["numpy","numpyro","jax-cosmo","diffrax","blackjax"]
+dependencies = ["numpyro",
+                "jax-cosmo",
+                "jaxpm @ git+https://github.com/DifferentiableUniverseInitiative/JaxPM.git@v0.0.2",
+                "diffrax",
+                "blackjax",
+                "getdist",
+                "graphviz",]
 readme = "README.md"
 requires-python = ">=3.8"
 urls = {Repository="https://github.com/hsimonfroy/benchmark-field-level"} # Documentation=""
