@@ -8,7 +8,7 @@
 ## Overview
 This repository accompanies the JCAP-submitted paper [**Benchmarking field-level cosmological inference from galaxy surveys**]().
 
-Field-level inference is a powerful approach that allows us to extract maximum information from cosmological surveys (e.g. galaxy surveys) by modeling the entire observed field rather than just its summary statistics. This project provides a benchmark suite to evaluate different inference methods and compare their performance on an idealized but standardized galaxy clustering model.
+Field-level inference is a powerful approach that allows maximum information extraction from cosmological surveys (e.g. galaxy surveys) by modeling the entire observed field rather than just its summary statistics. This project provides a benchmark suite to evaluate different preconditioning strategies and sampling methods, and to compare their performance on an idealized but standardized galaxy clustering model.
 
 
 ## Install
@@ -39,6 +39,12 @@ The benchmarked galaxy clustering model is **fast** (jit-compiled and GPU accele
  * Observational Noise
 
 https://github.com/hsimonfroy/montecosmo/assets/85559558/b64ff962-00fd-4b5f-8ea2-4f476c325cd0
+
+The model also includes different preconditioning strategies for the linear matter field:
+* Prior-preconditioning in real space
+* Prior-preconditioning in Fourier space
+* Static posterior-preconditioning assuming a Kaiser model 
+* Dynamic posterior-preconditioning assuming a Kaiser model
 
 ## Inference
 
