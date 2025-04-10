@@ -128,10 +128,32 @@ def pm_forces(pos, mesh_shape, mesh=None, grad_fd=False, lap_fd=False, r_split=0
                       for i in range(3)], axis=-1)
 
 
+def pm_forces2(delta_k, pos, mesh_shape, lap_fd=False, grad_fd=False):
+    """
+    Return 2LPT source term.
+    """
+    kvec = rfftk(mesh_shape)
+    pot_k = delta_k * invlaplace_kernel(kvec, lap_fd)
+
+    delta2 = 0
+    shear_acc = 0
+    for i in range(3):
+        # Add products of diagonal terms = 0 + s11*s00 + s22*(s11+s00)...
+        shear_ii = gradient_kernel(kvec, i, grad_fd)**2
+        shear_ii = jnp.fft.irfftn(shear_ii * pot_k)
+        delta2 += shear_ii * shear_acc 
+        shear_acc += shear_ii
+
+        for j in range(i+1, 3):
+            # Substract squared strict-up-triangle terms
+            hess_ij = gradient_kernel(kvec, i, grad_fd) * gradient_kernel(kvec, j, grad_fd)
+            delta2 -= jnp.fft.irfftn(hess_ij * pot_k)**2
+
+    force2 = pm_forces(pos, mesh_shape, mesh=jnp.fft.rfftn(delta2), grad_fd=grad_fd, lap_fd=lap_fd)
+    return force2
 
 
-
-def lpt(cosmo:Cosmology, init_mesh, pos, a, order=1, grad_fd=False, lap_fd=False):
+def lpt(cosmo:Cosmology, init_mesh, pos, a, order=2, grad_fd=False, lap_fd=False):
     """
     Compute first and second order LPT displacement, 
     e.g. Eq 3.5 and 3.7 [List and Hahn](https://arxiv.org/abs/2409.19049)
@@ -149,28 +171,12 @@ def lpt(cosmo:Cosmology, init_mesh, pos, a, order=1, grad_fd=False, lap_fd=False
     vel = force1
 
     if order == 2:
-        kvec = rfftk(mesh_shape)
-        pot_k = delta_k * invlaplace_kernel(kvec, lap_fd)
-
-        delta2 = 0
-        shear_acc = 0
-        for i in range(3):
-            # Add products of diagonal terms = 0 + s11*s00 + s22*(s11+s00)...
-            shear_ii = gradient_kernel(kvec, i, grad_fd)**2
-            shear_ii = jnp.fft.irfftn(shear_ii * pot_k)
-            delta2 += shear_ii * shear_acc 
-            shear_acc += shear_ii
-
-            for j in range(i+1, 3):
-                # Substract squared strict-up-triangle terms
-                hess_ij = gradient_kernel(kvec, i, grad_fd) * gradient_kernel(kvec, j, grad_fd)
-                delta2 -= jnp.fft.irfftn(hess_ij * pot_k)**2
-
-        force2 = pm_forces(pos, mesh_shape, mesh=jnp.fft.rfftn(delta2), grad_fd=grad_fd, lap_fd=lap_fd)
+        force2 = pm_forces2(delta_k, pos, mesh_shape, grad_fd=grad_fd, lap_fd=lap_fd)
         dpos -= a2gg(cosmo, a) * force2
         vel  -= a2dggdg(cosmo, a) * force2
 
     return dpos, vel
+
 
 
 
@@ -287,19 +293,19 @@ def bullfrog_vf(cosmo:Cosmology, dg, mesh_shape, grad_fd=False, lap_fd=False):
 
     def drift(state, dg):
         pos, vel = state
-        return pos + vel * dg / 2, vel
+        return pos + vel * dg, vel
     
     def vector_field(g0, state, args):
         old = state
-        state = drift(state, dg)
+        state = drift(state, dg / 2)
         state = kick(state, g0, cosmo, dg)
-        state = drift(state, dg)
+        state = drift(state, dg / 2)
         return tree.map(lambda new, old: (new - old) / dg, state, old)
     
     # def step(state, g0):
-    #     state = drift(state, dg)
+    #     state = drift(state, dg / 2)
     #     state = kick(state, g0, cosmo, dg)
-    #     state = drift(state, dg)
+    #     state = drift(state, dg / 2)
     #     return state, None
     
     return vector_field

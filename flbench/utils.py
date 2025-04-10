@@ -1,6 +1,8 @@
 from __future__ import annotations # for Union typing | in python<3.10
 
-from pickle import dump, load, HIGHEST_PROTOCOL
+import pickle
+import yaml
+
 from functools import partial, wraps
 
 import numpy as np
@@ -15,13 +17,54 @@ from numpyro.distributions import Distribution, constraints, TruncatedNormal, Un
 
 
 
+
 def pdump(obj, path):
     with open(path, 'wb') as file:
-        dump(obj, file, protocol=HIGHEST_PROTOCOL)
+        pickle.dump(obj, file, protocol=pickle.HIGHEST_PROTOCOL)
 
 def pload(path):
     with open(path, 'rb') as file:
-        return load(file)    
+        return pickle.load(file)    
+
+
+
+# Custom representers
+def numpy_array_representer(dumper, data):
+    return dumper.represent_list(data.tolist())
+
+def jax_array_representer(dumper, data):
+    return dumper.represent_list(np.asarray(data).tolist())
+
+def tuple_representer(dumper, data):
+    return dumper.represent_list(data)
+
+# Register the representers
+yaml.add_representer(np.ndarray, numpy_array_representer)
+yaml.add_representer(jnp.ndarray, jax_array_representer)
+yaml.add_representer(tuple, tuple_representer)
+
+# Custom constructors
+def numpy_array_constructor(loader, node):
+    return np.array(loader.construct_sequence(node))
+
+def jax_array_constructor(loader, node):
+    return jnp.array(loader.construct_sequence(node))
+
+def tuple_constructor(loader, node):
+    return tuple(loader.construct_sequence(node))
+
+# Register the constructors
+yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_SEQUENCE_TAG, numpy_array_constructor)
+yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_SEQUENCE_TAG, jax_array_constructor)
+yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_SEQUENCE_TAG, tuple_constructor)
+
+def ydump(obj, path):
+    with open(path, 'w') as file:
+        yaml.dump(obj, file)
+
+def yload(path):
+    with open(path, 'r') as file:
+        return yaml.safe_load(file)
 
 
 

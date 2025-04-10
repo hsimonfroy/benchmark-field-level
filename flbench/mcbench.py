@@ -6,11 +6,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from jax import numpy as jnp, random as jr, jit
 
-from numpyro.infer import MCMC
 from numpyro.diagnostics import print_summary
 from getdist import MCSamples
 
-from flbench.utils import pdump, pload, nvmap
+from flbench.utils import nvmap
 from flbench.metrics import multi_ess, multi_gr
 
 from dataclasses import dataclass, fields
@@ -285,7 +284,6 @@ class Chains(Samples):
         for i_run in range(start, end + 1):
             # Load
             part = dict(jnp.load(path+f"_{i_run}.npz")) # better than pickle for dict of array-like
-            # part = dict(jnp.load(path+f"_{i_run}.p", allow_pickle=True))
             part = cls(part, groups=groups, labels=labels)
             part = transform(part)
 
@@ -435,7 +433,6 @@ class Chains(Samples):
     def last(self, axis=1):
         return self.metric(lambda x: jnp.take(x, -1, axis), axis=axis)
     
-
     def moment(self, m:int|list=(0,1,2), axis=1):
         if isinstance(m, int):
             fn = lambda x: jnp.sum(x**m, axis)
@@ -482,7 +479,6 @@ class Chains(Samples):
         name = "n_evals" 
         infos, rest = mse_mom[[name], ['*~'+name]]
         return infos | tree.map(lambda x: infos[name] * x, rest)
-
 
     def multi_ess(self, axis=None):
         return self.metric(lambda x: multi_ess(x, axis=axis))
@@ -556,88 +552,6 @@ class Chains(Samples):
 
                 ax.legend()
 
-
-
-
-
-
-
-
-
-###############
-# NumPyro API #
-###############
-
-# TODO: can select var_names directly in numpyro run api
-
-def save_run(mcmc:MCMC, i_run:int, path:str, extra_fields:list=None, group_by_chain:bool=True):
-    """
-    Save one run of MCMC sampling, with extra fields and last state.
-    """
-    # Save samples (and extra fields)
-    samples = mcmc.get_samples(group_by_chain)
-
-    if extra_fields is not None:
-        extra = mcmc.get_extra_fields(group_by_chain)
-        if "num_steps" in extra: # renaming num_steps into clearer n_evals
-            n_evals = extra.pop("num_steps")
-            samples.update(n_evals=n_evals)
-        samples |= extra
-        del extra
-
-    jnp.savez(path+f"_{i_run}.npz", **samples) # better than pickle for dict of array-like
-    del samples
-
-    # Save or overwrite last state
-    pdump(mcmc.last_state, path+f"_last_state.p")
-    
-
-def sample_and_save(mcmc:MCMC, path:str, start:int=0, end:int=1, extra_fields=(),
-                    rng=42, group_by_chain:bool=True, init_params=None) -> MCMC:
-    """
-    Warmup and run MCMC, saving the specified variables and extra fields.
-    If `mcmc.num_warmup > 0`, first step is a warmup step.
-    So to continue a run, simply do before:
-    ```
-    mcmc.num_warmup = 0
-    mcmc.post_warmup_state = last_state
-    ```
-    """
-    if isinstance(rng, int):
-        rng = jr.key(rng)
-
-    # Warmup sampling
-    if mcmc.num_warmup > 0:
-        print(f"\nrun {start}/{end} (warmup)")
-
-        # Warmup
-        mcmc.warmup(rng, collect_warmup=True, extra_fields=extra_fields, init_params=init_params)
-        save_run(mcmc, start, path, extra_fields, group_by_chain)
-
-        # Print warmup last state infos
-        print("mean_acc_prob:", mcmc.last_state.mean_accept_prob, 
-            "\nstep_size:", mcmc.last_state.adapt_state.step_size, 
-            "\nsqrt_invmm:", mcmc.last_state.adapt_state.mass_matrix_sqrt_inv)
-
-        # Handling rng key and destroy init_params
-        rng_run = mcmc.post_warmup_state.rng_key
-        init_params = None
-        start += 1
-    else:
-        rng_run = rng
-
-    # Run sampling
-    for i_run in range(start, end+1):
-        print(f"\nrun {i_run}/{end}")
-            
-        # Run
-        mcmc.run(rng_run, extra_fields=extra_fields, init_params=init_params)
-        save_run(mcmc, i_run, path, extra_fields)
-
-        # Init next run at last state
-        mcmc.post_warmup_state = mcmc.last_state
-        rng_run = mcmc.post_warmup_state.rng_key
-    return mcmc
 
 
 

@@ -222,9 +222,9 @@ def qbci(x, p=.95, axis=0, weights=None, type='med', ord=1):
     if type == 'low':
         p_low = jnp.zeros_like(p)
     elif type == 'med':
-        p_low = (1-p)/2
+        p_low = (1 - p) / 2
     elif type == 'high':
-        p_low = 1-p
+        p_low = 1 - p
 
     p_high = p_low + p
     # q_low = jnp.quantile(x, p_low, axis)

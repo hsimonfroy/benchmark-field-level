@@ -1,4 +1,3 @@
-
 from jax import numpy as jnp, random as jr, jit, vmap, grad, debug, lax, tree
 from jax.flatten_util import ravel_pytree
 from functools import partial
@@ -8,6 +7,7 @@ from blackjax.progress_bar import gen_scan_fn # XXX: blackjax >= 1.2.3
 from blackjax.adaptation.mclmc_adaptation import MCLMCAdaptationState
 from blackjax.util import run_inference_algorithm
 from blackjax.mcmc.integrators import isokinetic_mclachlan, isokinetic_velocity_verlet, isokinetic_yoshida, isokinetic_omelyan
+from numpyro.infer import MCMC
 
 
 
@@ -681,6 +681,86 @@ def run_with_thinning(
 
 
 
+############################
+# NumPyro API for HMC/NUTS #
+############################
+from flbench.utils import pdump
+
+def save_run(mcmc:MCMC, i_run:int, path:str, extra_fields:list=None, group_by_chain:bool=True):
+    """
+    Save one run of MCMC sampling, with extra fields and last state.
+    """
+    # Save samples (and extra fields)
+    samples = mcmc.get_samples(group_by_chain)
+
+    if extra_fields is not None:
+        extra = mcmc.get_extra_fields(group_by_chain)
+        if "num_steps" in extra: # renaming num_steps into clearer n_evals
+            n_evals = extra.pop("num_steps")
+            samples.update(n_evals=n_evals)
+        samples |= extra
+        del extra
+
+    jnp.savez(path+f"_{i_run}.npz", **samples) # better than pickle for dict of array-like
+    del samples
+
+    # Save or overwrite last state
+    pdump(mcmc.last_state, path+f"_last_state.p")
+
+
+def sample_and_save(mcmc:MCMC, path:str, start:int=0, end:int=1, extra_fields=(),
+                    rng=42, group_by_chain:bool=True, init_params=None) -> MCMC:
+    """
+    Warmup and run MCMC, saving the specified variables and extra fields.
+    If `mcmc.num_warmup > 0`, first step is a warmup step.
+    So to continue a run, simply do before:
+    ```
+    mcmc.num_warmup = 0
+    mcmc.post_warmup_state = last_state
+    ```
+    """
+    if isinstance(rng, int):
+        rng = jr.key(rng)
+
+    # Warmup sampling
+    if mcmc.num_warmup > 0:
+        print(f"\nrun {start}/{end} (warmup)")
+
+        # Warmup
+        mcmc.warmup(rng, collect_warmup=True, extra_fields=extra_fields, init_params=init_params)
+        save_run(mcmc, start, path, extra_fields, group_by_chain)
+
+        # Print warmup last state infos
+        print("mean_acc_prob:", mcmc.last_state.mean_accept_prob,
+            "\nstep_size:", mcmc.last_state.adapt_state.step_size,
+            "\nsqrt_invmm:", mcmc.last_state.adapt_state.mass_matrix_sqrt_inv)
+
+        # Handling rng key and destroy init_params
+        rng_run = mcmc.post_warmup_state.rng_key
+        init_params = None
+        start += 1
+    else:
+        rng_run = rng
+
+    # Run sampling
+    for i_run in range(start, end+1):
+        print(f"\nrun {i_run}/{end}")
+
+        # Run
+        mcmc.run(rng_run, extra_fields=extra_fields, init_params=init_params)
+        save_run(mcmc, i_run, path, extra_fields)
+
+        # Init next run at last state
+        mcmc.post_warmup_state = mcmc.last_state
+        rng_run = mcmc.post_warmup_state.rng_key
+    return mcmc
+
+
+
+
+
+
+
 #############
 # Optimizer #
 #############
@@ -707,3 +787,8 @@ def optimize(potential, start, lr0=0.1, n_epochs=100):
         pots.append(value.astype(float))
     params = get_params(opt_state)
     return params, pots
+
+
+
+
+

@@ -19,7 +19,7 @@ from flbench.bricks import (samp2base, samp2base_mesh, get_cosmology, lin_power_
                                lagrangian_weights, rsd, kaiser_boost, kaiser_model, kaiser_posterior)
 from flbench.nbody import lpt, nbody_bf, nbody_bf_scan
 from flbench.metrics import spectrum, powtranscoh, deconv_paint
-from flbench.utils import pdump, pload
+from flbench.utils import ydump, yload
 
 from flbench.utils import cgh2rg, rg2cgh, ch2rshape, nvmap, safe_div, DetruncTruncNorm, DetruncUnif
 from flbench.mcbench import Chains
@@ -216,14 +216,12 @@ class Model():
     #################
     # Save and load #
     #################
-    def save(self, path): # with pickle because not array-like
-        pdump(asdict(self), path)
-        # pdump(self, path)
+    def save(self, path): # with yaml because not array-like
+        ydump(asdict(self), path)
 
     @classmethod
     def load(cls, path):
-        return cls(**pload(path))
-        # return pload(path)
+        return cls(**yload(path))
 
 
 
