@@ -22,7 +22,7 @@ from flbench.metrics import spectrum, powtranscoh, deconv_paint
 from flbench.utils import ydump, yload, ysafe_dump, ysafe_load
 
 from flbench.utils import cgh2rg, rg2cgh, ch2rshape, nvmap, safe_div, DetruncTruncNorm, DetruncUnif
-from flbench.mcbench import Chains
+from flbench.chains import Chains
 
 
 
