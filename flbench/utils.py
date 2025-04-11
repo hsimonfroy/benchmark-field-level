@@ -4,6 +4,7 @@ import pickle
 import yaml
 
 from functools import partial, wraps
+from pathlib import Path
 
 import numpy as np
 import jax.numpy as jnp
@@ -14,57 +15,6 @@ from jax.scipy.special import logsumexp
 from jax.scipy.stats import norm
 
 from numpyro.distributions import Distribution, constraints, TruncatedNormal, Uniform
-
-
-
-
-def pdump(obj, path):
-    with open(path, 'wb') as file:
-        pickle.dump(obj, file, protocol=pickle.HIGHEST_PROTOCOL)
-
-def pload(path):
-    with open(path, 'rb') as file:
-        return pickle.load(file)    
-
-
-
-# Custom representers
-def numpy_array_representer(dumper, data):
-    return dumper.represent_list(data.tolist())
-
-def jax_array_representer(dumper, data):
-    return dumper.represent_list(np.asarray(data).tolist())
-
-def tuple_representer(dumper, data):
-    return dumper.represent_list(data)
-
-# Register the representers
-yaml.add_representer(np.ndarray, numpy_array_representer)
-yaml.add_representer(jnp.ndarray, jax_array_representer)
-yaml.add_representer(tuple, tuple_representer)
-
-# Custom constructors
-def numpy_array_constructor(loader, node):
-    return np.array(loader.construct_sequence(node))
-
-def jax_array_constructor(loader, node):
-    return jnp.array(loader.construct_sequence(node))
-
-def tuple_constructor(loader, node):
-    return tuple(loader.construct_sequence(node))
-
-# Register the constructors
-yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_SEQUENCE_TAG, numpy_array_constructor)
-yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_SEQUENCE_TAG, jax_array_constructor)
-yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_SEQUENCE_TAG, tuple_constructor)
-
-def ydump(obj, path):
-    with open(path, 'w') as file:
-        yaml.dump(obj, file)
-
-def yload(path):
-    with open(path, 'r') as file:
-        return yaml.safe_load(file)
 
 
 
@@ -111,6 +61,57 @@ def safe_div(x, y):
     y_nozeros = jnp.where(y==0, 1, y)
     return jnp.where(y==0, 0, x / y_nozeros)
 
+
+
+#################
+# Dump and Load #
+#################
+class Path(Path):
+    """Pathlib path but with concatenation operator. Please tell me why it is not already implemented."""
+    def __add__(self, other):
+        if isinstance(other, (str, Path)):
+            return Path(str(self) + str(other))
+        return NotImplemented
+
+
+def pdump(obj, path):
+    """Pickle dump"""
+    with open(path, 'wb') as file:
+        pickle.dump(obj, file, protocol=pickle.HIGHEST_PROTOCOL)
+
+def pload(path):
+    """Pickle load"""
+    with open(path, 'rb') as file:
+        return pickle.load(file)    
+
+def ydump(obj, path):
+    """YAML dump"""
+    with open(path, 'w') as file:
+        yaml.dump(obj, file)
+
+def yload(path):
+    """YAML load"""
+    with open(path, 'r') as file:
+        return yaml.load(file, Loader=yaml.Loader)
+
+def numpy_array_representer(dumper, data):
+    return dumper.represent_list(data.tolist())
+
+def numpy_array_constructor(loader, node):
+    return np.array(loader.construct_sequence(node))
+
+yaml.add_representer(np.ndarray, numpy_array_representer, Dumper=yaml.SafeDumper)
+yaml.add_constructor(np.ndarray, numpy_array_constructor, Loader=yaml.SafeLoader)
+
+def ysafe_dump(obj, path):
+    """YAML safe dump"""
+    with open(path, 'w') as file:
+        yaml.safe_dump(obj, file)
+
+def ysafe_load(path):
+    """YAML safe load"""
+    with open(path, 'r') as file:
+        return yaml.safe_load(file)
 
 
 ######################################

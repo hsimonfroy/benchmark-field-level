@@ -64,7 +64,7 @@ def mean_slice(mesh, sli:int | float | slice=None, axis=-1):
     return np.moveaxis(mesh, axis, -1)[...,sli].mean(-1)
 
 
-def plot_mesh(mesh, box_shape=None, sli:int | float | slice=None, axis=-1, vlim:float | tuple[float,float]=1e-4, cmap='viridis'):
+def plot_mesh(mesh, box_shape=None, sli:int | float | slice=None, axis=-1, vlim:float | tuple[float,float]=1e-4, **kwargs):
     """
     Plot a 2D mean projected slice (along given axis) from a 3D mesh.
 
@@ -108,7 +108,7 @@ def plot_mesh(mesh, box_shape=None, sli:int | float | slice=None, axis=-1, vlim:
     # xx, yy = np.indices(mesh_shape[:2]) * (box_shape/mesh_shape)[:2,None,None]
     xs, ys = np.linspace(0, box_shape[0], mesh_shape[0]), np.linspace(0, box_shape[1], mesh_shape[1])
     xx, yy = np.meshgrid(xs, ys, indexing='ij')
-    quad = plt.pcolormesh(xx, yy, mesh2d, vmin=vmin, vmax=vmax, cmap=cmap)
+    quad = plt.pcolormesh(xx, yy, mesh2d, vmin=vmin, vmax=vmax, **kwargs)
     plt.gca().set_aspect(1)
     return quad
 
