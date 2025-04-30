@@ -1,6 +1,6 @@
 # Benchmark Field-Level Inference
 
-[![arXiv](https://img.shields.io/badge/astro--ph.CO-arXiv:2504.XXXX-b31b1b.svg)](https://arxiv.org/abs/2504.20130)
+[![arXiv](https://img.shields.io/badge/astro--ph.CO-arXiv:2504.20130-b31b1b.svg)](https://arxiv.org/abs/2504.20130)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/hsimonfroy/benchmark-field-level/blob/main/examples/infer_model.ipynb) 
 
