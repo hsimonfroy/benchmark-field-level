@@ -38,7 +38,9 @@ The benchmarked galaxy clustering model is **fast** (jit-compiled and GPU accele
  * Second order Lagrangian galaxy bias
  * Observational Noise
 
-https://github.com/hsimonfroy/montecosmo/assets/85559558/b64ff962-00fd-4b5f-8ea2-4f476c325cd0
+<div align="center">
+   <img src=https://github.com/user-attachments/assets/13f56149-8678-422f-8b23-cf110f7a28ee alt=model width="800">   
+</div>
 
 The model also includes different preconditioning strategies for the linear matter field:
 * Prior-preconditioning in real space
@@ -47,7 +49,16 @@ The model also includes different preconditioning strategies for the linear matt
 * Dynamic posterior-preconditioning assuming a Kaiser model
 
 ## Inference
+Interfaced MCMC samplers include:
+* Hamiltonian Monte Carlo (HMC)
+* No-U-Turn Sampler (NUTS)
+* NUTS within Gibbs (NUTSwG)
+* Metropolis-Adjusted Microcanonical Sampler (MAMS, i.e. adjusted MCHMC)
+* MicroCanonical Langevin Monte Carlo (MCLMC, unadjusted)
 
+<div align="center">
+   <img src=https://github.com/user-attachments/assets/d20f77ca-580e-4747-9d67-8b7511de4b2f alt=sampler_m64_1lpt_triangle1 width="500">   
+</div>
 
 ## Examples
 The `examples/` directory contains Jupyter notebooks that demonstrate how to use the benchmark tools:
