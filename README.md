@@ -1,12 +1,12 @@
 # Benchmark Field-Level Inference
 
-[![arXiv](https://img.shields.io/badge/astro--ph.CO-arXiv:2504.XXXX-b31b1b.svg)](https://arxiv.org/abs/2504.XXXX)
+[![arXiv](https://img.shields.io/badge/astro--ph.CO-arXiv:2504.XXXX-b31b1b.svg)](https://arxiv.org/abs/2504.20130)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/hsimonfroy/benchmark-field-level/blob/main/examples/infer_model.ipynb) 
 
 
 ## Overview
-This repository accompanies the JCAP-submitted paper [**Benchmarking field-level cosmological inference from galaxy surveys**]().
+This repository accompanies the JCAP-submitted paper [**Benchmarking field-level cosmological inference from galaxy surveys**](https://arxiv.org/abs/2504.20130).
 
 Field-level inference is a powerful approach that allows maximum information extraction from cosmological surveys (e.g. galaxy surveys) by modeling the entire observed field rather than just its summary statistics. This project provides a benchmark suite to evaluate different preconditioning strategies and sampling methods, and to compare their performance on an idealized but standardized galaxy clustering model.
 

@@ -214,7 +214,7 @@ def lagrangian_weights(cosmo:Cosmology, a, pos, box_shape,
 def rsd(cosmo:Cosmology, a, vel, los:np.ndarray=None):
     """
     Redshift-Space Distortion (RSD) displacement from cosmology and growth-time integrator velocity.
-    Computed with respect to scale factor and line-of-sight.
+    Computed with respect to scale factor(s) and line-of-sight(s).
 
     No RSD if los is None.
     """
@@ -222,12 +222,11 @@ def rsd(cosmo:Cosmology, a, vel, los:np.ndarray=None):
         return jnp.zeros_like(vel)
     else:
         los = np.asarray(los)
-        los /= np.linalg.norm(los)
-        # growth-time integrator velocity = dpos / dg = v / (H * g * f), so dpos_rsd := v / H = vel * g * f
-        # If vel is in comoving Mpc/h/s, dpos_rsd is in Mpc/h
+        # growth-time integrator vel := dq / dg = v / (H * g * f), so dq_rsd := v / H = vel * g * f
+        # v in (Mpc/h)*(km/s/(Mpc/h)) = km/s, so dq_rsd in Mpc/h
         dpos = vel * a2g(cosmo, a) * a2f(cosmo, a)
-        # Project velocity on line-of-sight
-        dpos = dpos * los
+        # Project velocity on line-of-sight(s)
+        dpos = (dpos * los).sum(-1, keepdims=True) * los
         return dpos
 
 
