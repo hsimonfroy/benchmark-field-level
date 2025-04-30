@@ -39,7 +39,10 @@ The benchmarked galaxy clustering model is **fast** (jit-compiled and GPU accele
  * Observational Noise
 
 <div align="center">
-   <img src=https://github.com/user-attachments/assets/13f56149-8678-422f-8b23-cf110f7a28ee alt=model width="800">   
+   <picture>
+     <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/13f56149-8678-422f-8b23-cf110f7a28ee">
+     <img alt="model" src="https://github.com/user-attachments/assets/4bb759e3-39c5-4a0c-a038-729ef331b6bc" width="800">
+   </picture>
 </div>
 
 The model also includes different preconditioning strategies for the linear matter field:
@@ -57,13 +60,19 @@ Interfaced MCMC samplers include:
 * MicroCanonical Langevin Monte Carlo (MCLMC, unadjusted)
 
 <div align="center">
-   <img src=https://github.com/user-attachments/assets/d20f77ca-580e-4747-9d67-8b7511de4b2f alt=sampler_m64_1lpt_triangle1 width="500">   
+   <picture>
+     <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/cec09893-ed9a-4108-b78c-df273568b4bf">
+     <img alt="sampler_triangle" src="https://github.com/user-attachments/assets/d20f77ca-580e-4747-9d67-8b7511de4b2f" width=500>
+   </picture>
 </div>
 
 The cosmology $(\Omega_m, \sigma_8)$ and bias parameters $(b_1, b_2, b_{s^2}, b_{\nabla^2})$ are sampled jointly with the ($\geq 10^6$-dimensional) initial linear matter field $\delta_L$. From these samples, the universe history can be reconstructed, including the evolved galaxy density field $\delta_g$.
 
 <div align="center">
-   <img src=https://github.com/user-attachments/assets/0747672f-d550-4967-854a-1dc23281c13c alt=chains width="975">   
+   <picture>
+     <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/0747672f-d550-4967-854a-1dc23281c13c">
+     <img alt="chains" src="https://github.com/user-attachments/assets/b161bc1d-fc2c-4f58-80f6-994239442d46">
+   </picture>
 </div>
 
 
