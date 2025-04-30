@@ -8,7 +8,7 @@
 ## Overview
 This repository accompanies the JCAP-submitted paper [**Benchmarking field-level cosmological inference from galaxy surveys**](https://arxiv.org/abs/2504.20130).
 
-Field-level inference is a powerful approach that allows maximum information extraction from cosmological surveys (e.g. galaxy surveys) by modeling the entire observed field rather than just its summary statistics. This project provides a benchmark suite to evaluate different preconditioning strategies and sampling methods, and to compare their performance on an idealized but standardized galaxy clustering model.
+Field-level inference is a powerful approach that allows maximum information extraction from cosmological surveys (e.g. galaxy surveys) by modeling the entire observed field rather than just its summary statistics. This project provides a benchmark suite to evaluate different preconditioning strategies and high-dimensional sampling methods, and to compare their performance on an idealized but standardized galaxy clustering model.
 
 
 ## Install
@@ -59,6 +59,14 @@ Interfaced MCMC samplers include:
 <div align="center">
    <img src=https://github.com/user-attachments/assets/d20f77ca-580e-4747-9d67-8b7511de4b2f alt=sampler_m64_1lpt_triangle1 width="500">   
 </div>
+
+The cosmology $(\Omega_m, \sigma_8)$ and bias parameters $(b_1, b_2, b_{s^2}, b_{\nabla^2})$ are sampled jointly with the ($\geq 10^6$-dimensional) initial linear matter field $\delta_L$. From these samples, the universe history can be reconstructed, including the evolved galaxy density field $\delta_g$.
+
+<div align="center">
+   <img src=https://github.com/user-attachments/assets/0747672f-d550-4967-854a-1dc23281c13c alt=chains width="975">   
+</div>
+
+
 
 ## Examples
 The `examples/` directory contains Jupyter notebooks that demonstrate how to use the benchmark tools:
