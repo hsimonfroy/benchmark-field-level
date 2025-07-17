@@ -66,13 +66,13 @@ def safe_div(x, y):
 #################
 # Dump and Load #
 #################
-class Path(Path):
-    """Pathlib path but with concatenation operator. Please tell me why it is not already implemented."""
+class Path(type(Path()), Path):
+    """Pathlib path but with right-concatenation operator. Please tell me why it is not natively implemented."""
+    # See pathlib inheritance https://stackoverflow.com/questions/61689391/error-with-simple-subclassing-of-pathlib-path-no-flavour-attribute
     def __add__(self, other):
         if isinstance(other, (str, Path)):
             return Path(str(self) + str(other))
         return NotImplemented
-
 
 def pdump(obj, path):
     """Pickle dump"""
